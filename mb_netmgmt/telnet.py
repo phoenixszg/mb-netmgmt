@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with mb-netmgmt. If not, see <https://www.gnu.org/licenses/
 
-import logging
 import re
 import socket
 import telnetlib
