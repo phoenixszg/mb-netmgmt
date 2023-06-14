@@ -17,7 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with mb-netmgmt. If not, see <https://www.gnu.org/licenses/
 
+import logging
 import re
+import socket
 import telnetlib
 import time
 from socketserver import StreamRequestHandler, TCPServer
@@ -42,7 +44,7 @@ class Handler(StreamRequestHandler, Protocol):
             pass
         self.wfile.write(self.command_prompt)
         request = None
-        while request != b"exit\r\n":
+        while not is_socket_closed(self.telnet.sock):
             request, request_id = self.read_request()
             if not request:
                 return
@@ -61,7 +63,13 @@ class Handler(StreamRequestHandler, Protocol):
         self.wfile.write(response["response"].encode())
 
     def read_proxy_response(self):
-        return {"response": self.telnet.read_until(self.command_prompt).decode()}
+        prompt_patterns = []
+        prompt_patterns.append(b"[\r\n][\-\w+\.:/]+(?:\([^\)]+\))?[>#] ?$")  # IOS
+        prompt_patterns.append(b"[\r\n\x00]RP/\d+/(?:RS?P)?\d+\/CPU\d+:[^#]+(?:\([^\)]+\))?#$")  # IOS XR
+        prompt_patterns.append(b"[\r\n\x00](?P<text>[\w/ .:,\(\)\-\?]*)(?P<default>\[[\w/.:\-]*\])?(?(default)(?P<end1>(?:\?|: ?|)$)|(?P<end2>: $))")  # Interactive prompt
+        prompt_patterns.append(b"[\r\n\x00] --More-- $")  # Terminal paging
+        _, _, response = self.telnet.expect(prompt_patterns)
+        return {"response": response.decode()}
 
     def handle_username_prompt(self):
         username_prompt = b"Username: "
@@ -84,3 +92,19 @@ class Handler(StreamRequestHandler, Protocol):
 
 def extract_username(byte_string):
     return re.match(b".*?([-0-9a-zA-Z_].*\n)", byte_string).group(1)
+
+
+def is_socket_closed(sock: socket.socket) -> bool:
+    try:
+        # this will try to read bytes without blocking and also without removing them from buffer (peek only)
+        data = sock.recv(16, socket.MSG_DONTWAIT | socket.MSG_PEEK)
+        if len(data) == 0:
+            return True
+    except BlockingIOError:
+        return False  # socket is open and reading from it would block
+    except ConnectionResetError:
+        return True  # socket was closed for some other reason
+    except Exception as e:
+        logging.exception("unexpected exception when checking if a socket is closed")
+        return False
+    return False
