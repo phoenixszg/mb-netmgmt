@@ -26,7 +26,6 @@ from socketserver import StreamRequestHandler, TCPServer
 from mb_netmgmt.__main__ import Protocol
 
 Server = TCPServer
-stopped = False
 
 
 class Handler(StreamRequestHandler, Protocol):
@@ -44,7 +43,8 @@ class Handler(StreamRequestHandler, Protocol):
             pass
         self.wfile.write(self.command_prompt)
         request = None
-        while not stopped:
+        self.stopped = False
+        while not self.stopped:
             request, request_id = self.read_request()
             self.handle_command(request, request_id)
 
@@ -59,6 +59,8 @@ class Handler(StreamRequestHandler, Protocol):
 
     def respond(self, response, request_id):
         self.wfile.write(response["response"].encode())
+        if response["response"].encode() == b"exit\r\n\r":
+            self.stopped = True
 
     def read_proxy_response(self):
         prompt_patterns = []
