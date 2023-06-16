@@ -59,7 +59,7 @@ class Handler(StreamRequestHandler, Protocol):
 
     def respond(self, response, request_id):
         self.wfile.write(response["response"].encode())
-        if response["response"].encode() == b"exit\r\n\r":
+        if response["response"].encode() in [b"exit\r\n\r", b"quit\r\n\r"]:
             self.stopped = True
 
     def read_proxy_response(self):
