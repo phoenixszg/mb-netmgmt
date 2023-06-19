@@ -46,6 +46,8 @@ class Handler(StreamRequestHandler, Protocol):
         self.stopped = False
         while not self.stopped:
             request, request_id = self.read_request()
+            if not request:
+                return
             self.handle_command(request, request_id)
 
     def handle_command(self, command, request_id):
