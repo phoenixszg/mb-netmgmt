@@ -18,7 +18,6 @@
 # along with mb-netmgmt. If not, see <https://www.gnu.org/licenses/
 
 import re
-import socket
 import telnetlib
 import time
 from socketserver import StreamRequestHandler, TCPServer
