@@ -80,6 +80,7 @@ class Handler(BaseRequestHandler, Protocol):
             key_filename=self.key_filename,
             hostkey_verify=False,
         )
+        self.manager.huge_tree = self.proxy.get("xml_huge_tree", False)
 
     def handle_prompt(self):
         mb_response = self.post_request({"rpc": ""})
