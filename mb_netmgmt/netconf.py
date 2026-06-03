@@ -118,7 +118,8 @@ class Handler(BaseRequestHandler, Protocol):
 
     def respond(self, response, request_id):
         reply = response.get("rpc-reply", f'<rpc-reply xmlns="{BASE_NS_1_0}"/>')
-        message = add_message_id(reply, request_id)
+        huge_tree = self.proxy.get("xml_huge_tree", False)
+        message = add_message_id(reply, request_id, huge_tree)
         self.session.send(message)
 
     def transport_read(self):
@@ -144,8 +145,9 @@ class Listener(SessionListener):
         logging.exception(ex)
 
 
-def add_message_id(rpc_reply, message_id):
-    ele = etree.fromstring(rpc_reply)
+def add_message_id(rpc_reply, message_id, huge_tree):
+    parser = etree.XMLParser(huge_tree=huge_tree)
+    ele = etree.fromstring(rpc_reply, parser=parser)
     ele.set("message-id", message_id)
     return to_xml(ele)
 
